@@ -35,6 +35,7 @@ dropdowns.forEach((dropdown) => {
     });
   });
 });
+
 document.addEventListener("click", (e) => {
   dropdowns.forEach((dropdown) => {
     if (!dropdown.contains(e.target)) {
@@ -66,8 +67,20 @@ swapBtn.addEventListener("click", (e) => {
   translate();
 });
 
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
 function translate() {
   const inputText = inputTextElem.value;
+  if (!inputText.trim()) {
+    outputTextElem.value = "";
+    return;
+  }
   const inputLanguage =
     inputLanguageDropdown.querySelector(".selected").dataset.value;
   const outputLanguage =
@@ -78,64 +91,20 @@ function translate() {
   fetch(url)
     .then((response) => response.json())
     .then((json) => {
-      console.log(json);
       outputTextElem.value = json[0].map((item) => item[0]).join("");
     })
     .catch((error) => {
       console.log(error);
     });
 }
+
+const debouncedTranslate = debounce(translate, 500);
+
 inputTextElem.addEventListener("input", (e) => {
   if (inputTextElem.value.length > 5000) {
     inputTextElem.value = inputTextElem.value.slice(0, 5000);
   }
-  translate();
-});
-
-const uploadDocument = document.querySelector("#upload-document"),
-  uploadTitle = document.querySelector("#upload-title");
-
-uploadDocument.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (
-    file.type === "application/pdf" ||
-    file.type === "text/plain" ||
-    file.type === "application/msword" ||
-    file.type ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-  ) {
-    uploadTitle.innerHTML = file.name;
-    const reader = new FileReader();
-    reader.readAsText(file);
-    reader.onload = (e) => {
-      inputTextElem.value = e.target.result;
-      translate();
-    };
-  } else {
-    alert("Please upload a valid file");
-  }
-});
-
-const downloadBtn = document.querySelector("#download-btn");
-
-downloadBtn.addEventListener("click", (e) => {
-  const outputText = outputTextElem.value;
-  const outputLanguage =
-    outputLanguageDropdown.querySelector(".selected").dataset.value;
-  if (outputText) {
-    const blob = new Blob([outputText], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.download = `translated-to-${outputLanguage}.txt`;
-    a.href = url;
-    a.click();
-  }
-});
-
-const darkModeCheckbox = document.getElementById("dark-mode-btn");
-
-darkModeCheckbox.addEventListener("change", () => {
-  document.body.classList.toggle("dark");
+  debouncedTranslate();
 });
 
 const inputChars = document.querySelector("#input-chars");
